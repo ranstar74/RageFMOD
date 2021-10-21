@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+    <BaseIntermediateOutputPath />
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ScriptHookVDotNet3" Version="3.3.2" />
+    <Reference Include="FusionLibrary">
+      <HintPath>S:\SteamLibrary\steamapps\common\Grand Theft Auto V\scripts\FusionLibrary.dll</HintPath>
+    </Reference>
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Sdk\fmod.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fmodL.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fmodL_vc.lib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fmodstudio.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fmodstudioL.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fmodstudioL_vc.lib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fmodstudio_vc.lib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fmod_vc.lib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fsbank.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\fsbank_vc.lib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\libfsbvorbis64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Sdk\opus.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="&#xD;&#xA;   IF NOT &quot;%25GTAPath%25&quot; == &quot;&quot; (&#xD;&#xA;   IF NOT EXIST &quot;%25GTAPath%25&quot; (&#xD;&#xA;   MKDIR &quot;%25GTAPath%25&quot;&#xD;&#xA;   )&#xD;&#xA;   copy &quot;$(TargetPath)&quot; &quot;%25GTAPath%25\scripts\$(TargetFileName)&quot;&#xD;&#xA;   copy &quot;$(TargetDir)\$(TargetName).pdb&quot; &quot;%25GTAPath%25\scripts\$(TargetName).pdb&quot;&#xD;&#xA;                                                       copy &quot;$(TargetDir)\$(TargetName).xml&quot; &quot;%25GTAPath%25\scripts\$(TargetName).xml&quot;&#xD;&#xA;   )&#xD;&#xA;  " />
+  </Target>
+</Project>
