@@ -12,19 +12,6 @@ namespace RageAudio.Memory.Classes
     /// </summary>
     internal static class GameWorld
     {
-        /// <summary>
-        /// Whether random trains are enabled or not.
-        /// </summary>
-        public static bool AreRandomTrainsOn
-        {
-            get
-            {
-                return Convert.ToBoolean(NativeMemory.Get<byte>(NativeMemory.AreRandomTrainsOn));
-            }
-            set
-            {
-                Marshal.WriteByte(NativeMemory.AreRandomTrainsOn, Convert.ToByte(value));
-            }
-        }
+
     }
 }

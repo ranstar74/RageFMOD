@@ -14,8 +14,6 @@ namespace RageAudio.Memory
 	/// </remarks>
     internal static class NativeMemory
     {
-        public static readonly IntPtr AreRandomTrainsOn;
-
         public static readonly IntPtr IsGamePaused;
 
         public static readonly IntPtr HudInfoAddr;
@@ -66,13 +64,12 @@ namespace RageAudio.Memory
             {
                 Pattern pattern;
 
-                AreRandomTrainsOn = IntPtr.Zero;
-
                 //pattern = new Pattern(
                 //     "\x03\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x90",
                 //     "xxxxxxxxxxxxxxxxxxxxx");
                 // HudInfoAddr = (IntPtr)pattern.Get().ToPointer();
                 // LogHelper.Log(HudInfoAddr, nameof(HudInfoAddr));
+                IsGamePaused = IntPtr.Zero;
 
                 // ---
                 HudInfoAddr = IntPtr.Zero;
@@ -91,9 +88,9 @@ namespace RageAudio.Memory
                 // ---
 
                 pattern = new Pattern(
-                    "\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x05",
-                    "xxxxxxxxxxxxxxxxxxxxx");
-                GameSettingsAddr = (IntPtr)pattern.Get().ToPointer() + 0x1C;
+                    "\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x05",
+                    "x?x?x?x?xxx?x?x?x?x?x");
+                GameSettingsAddr = (IntPtr)pattern.Get().ToPointer() + 0x1C; // mov [r10+28],edx
                 LogHelper.Log(GameSettingsAddr, nameof(GameSettingsAddr));
             }
         }
@@ -111,7 +108,9 @@ namespace RageAudio.Memory
         public static T Get<T>(IntPtr baseAddr, int offset = 0)
         {
             T defaultValue = Activator.CreateInstance<T>();
-            if (baseAddr == IntPtr.Zero || baseAddr == null)
+
+            // Addresses below 0x1000 most likely are NullPtr
+            if (baseAddr.ToInt32() <= 0x1000 || baseAddr == null)
                 return defaultValue;
 
             IntPtr addr = baseAddr + offset;
