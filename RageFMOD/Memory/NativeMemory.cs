@@ -51,6 +51,12 @@ namespace RageAudio.Memory
         public const int IsGpsRouteVisibleOffset = 0x64;
         public const int SafezoneSizeOffset = 0x68;
 
+        // Vehicle
+        public const int VehicleAudioOffset = 0x970;
+
+        // Audio
+        public const int EnvironmentGroupOffset = 0x38;
+
         /// <summary>
         /// Scans game memory.
         /// </summary>
@@ -60,34 +66,27 @@ namespace RageAudio.Memory
             {
                 Pattern pattern;
 
-                // ---
-                //pattern = new Pattern(
-                //    "\x70\x00\xee\xf3\x38\x02\x00\x00\x00\x00",
-                //    "x?xxxxxxxx");
-                //AreRandomTrainsOn = (IntPtr)pattern.Get().ToPointer() - 0x350;
-                //LogHelper.Log(AreRandomTrainsOn, nameof(AreRandomTrainsOn));
                 AreRandomTrainsOn = IntPtr.Zero;
 
-                // ---
-                //pattern = new Pattern("\x00\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff",
-                //    "xxxxxxxxxxxx");
-                //IsGamePaused = (IntPtr)pattern.Get().ToPointer();
-                //LogHelper.Log(IsGamePaused, nameof(IsGamePaused));
-                // ---
-
-                pattern = new Pattern(
-                    "\x03\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x90",
-                    "xxxxxxxxxxxxxxxxxxxxx");
-                HudInfoAddr = (IntPtr)pattern.Get().ToPointer();
-                LogHelper.Log(HudInfoAddr, nameof(HudInfoAddr));
+                //pattern = new Pattern(
+                //     "\x03\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x90",
+                //     "xxxxxxxxxxxxxxxxxxxxx");
+                // HudInfoAddr = (IntPtr)pattern.Get().ToPointer();
+                // LogHelper.Log(HudInfoAddr, nameof(HudInfoAddr));
 
                 // ---
+                HudInfoAddr = IntPtr.Zero;
+                //pattern = new Pattern(
+                //    "\x80\x69\x00\x00\xf7\x7f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x2e\x3f\x41\x56\x53\x68\x00\x00\x00\x00\x56",
+                //    "xx??xx?xxxxxxxxxxxxxxx????x");
+                //IsWindowFocusedAddr = (IntPtr)pattern.Get().ToPointer() + 0xB3;
+                //LogHelper.Log(IsWindowFocusedAddr, nameof(IsWindowFocusedAddr));
 
-                pattern = new Pattern(
-                    "\x80\x69\x00\x00\xf7\x7f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x2e\x3f\x41\x56\x53\x68\x00\x00\x00\x00\x56",
-                    "xx??xx?xxxxxxxxxxxxxxx????x");
-                IsWindowFocusedAddr = (IntPtr)pattern.Get().ToPointer() + 0xB3;
-                LogHelper.Log(IsWindowFocusedAddr, nameof(IsWindowFocusedAddr));
+                //pattern = new Pattern("\x18\x40\x00\x55\xf7\x7f\x00\x00\x60",
+                //    "xx?xxx?xx");
+                //IsWindowFocusedAddr = (IntPtr)pattern.Get().ToPointer() - 0x4D5;
+                //LogHelper.Log(IsWindowFocusedAddr, nameof(IsWindowFocusedAddr));
+                IsWindowFocusedAddr = IntPtr.Zero;
 
                 // ---
 

@@ -15,6 +15,9 @@ namespace RageAudio.Memory.Classes
         {
             get
             {
+                // FIXME: TEMP FIX
+                return true;
+
                 if (NativeMemory.IsWindowFocusedAddr == IntPtr.Zero)
                 {
                     return false;
