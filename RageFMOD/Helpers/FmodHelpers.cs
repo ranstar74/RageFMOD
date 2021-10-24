@@ -22,52 +22,18 @@ namespace RageAudio.Helpers
         }
 
         /// <summary>
-        /// Gets camera position and velocity and creates 3d attributes from them.
-        /// </summary>
-        /// <param name="camera">Camera context.</param>
-        /// <returns>3d attributes of given camera.</returns>
-        public static FMOD.ATTRIBUTES_3D Get3DAttributes(this Camera camera)
-        {
-            // TODO: Add correct velocity for camera
-            return new FMOD.ATTRIBUTES_3D
-            {
-                forward = camera.ForwardVector.ToFmodVector(),
-                position = camera.Position.ToFmodVector(),
-                up = camera.UpVector.ToFmodVector(),
-                velocity = Vector3.Zero.ToFmodVector()
-            };
-        }
-
-        /// <summary>
-        /// Gets 3d attributes from gameplay camera and player or player vehicle velocity.
-        /// </summary>
-        /// <returns>3d attributes of player.</returns>
-        public static FMOD.ATTRIBUTES_3D GetGamePlayer3DAttributes()
-        {
-            Vector3 velocitySource = Game.Player.Character.IsInVehicle() ? 
-                Game.Player.Character.CurrentVehicle.Velocity : Game.Player.Character.Velocity;
-
-            return new FMOD.ATTRIBUTES_3D
-            {
-                forward = GameplayCamera.ForwardVector.ToFmodVector(),
-                position = GameplayCamera.Position.ToFmodVector(),
-                up = GameplayCamera.UpVector.ToFmodVector(),
-                velocity = velocitySource.ToFmodVector()
-            };
-        }
-
-        /// <summary>
         /// Converts <see cref="Vector3"/> to <see cref="FMOD.VECTOR"/>.
         /// </summary>
         /// <param name="vector">Vector to convert.</param>
-        /// <returns>Converter <see cref="FMOD.VECTOR"/>.</returns>
+        /// <returns><see cref="Vector3"/> converterd to <see cref="FMOD.VECTOR"/>.</returns>
         public static FMOD.VECTOR ToFmodVector(this Vector3 vector)
         {
+            // FMod uses Y axis as vertical, GTA - Z, so we swap them
             return new FMOD.VECTOR()
             {
                 x = vector.X,
-                y = vector.Y,
-                z = vector.Z,
+                y = vector.Z,
+                z = vector.Y,
             };
         }
     }
