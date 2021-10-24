@@ -59,10 +59,12 @@ namespace RageAudio
                 AudioEvent audioEvent = AudioEvents[i];
 
                 float volume = GameSettings.SoundVolume;
-                if(GameSettings.MuteSoundOnFocusLost)
+                if (GameSettings.MuteSoundOnFocusLost)
                     if (!GameWindow.IsWindowFocused)
                         volume = 0f;
 
+                // TODO: Remove 1f
+                volume = 1f;
                 audioEvent.EventInstance.set3DAttributes(SourceEntity.Get3DAttributes());
                 audioEvent.EventInstance.setVolume(volume);
 
@@ -83,7 +85,7 @@ namespace RageAudio
         /// <param name="autoPlay">If set to True, playback will be automatically started.</param>
         public AudioEvent CreateEvent(string eventName, bool autoPlay)
         {
-            RESULT getEvent = System.getEvent($"event:/{eventName}", out EventDescription _event);
+            RESULT getEvent = System.getEvent(eventName, out EventDescription _event);
 
             LogHelper.Log(AudioPlayer, $"Get Event: {eventName} Valid: {_event.isValid()}", getEvent);
 

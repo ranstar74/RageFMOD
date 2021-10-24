@@ -1,4 +1,5 @@
 ﻿using GTA;
+using GTA.Native;
 using RageAudio.Memory.Classes;
 using System;
 using System.Text;
@@ -58,12 +59,14 @@ namespace RageAudio
         /// </summary>
         private void OnTick(object sender, EventArgs e)
         {
+            AudioListener.Update();
             for (int i = 0; i < AudioPlayer.AudioPlayers.Count; i++)
             {
                 AudioPlayer.AudioPlayers[i].Update();
             }
 
             StringBuilder sb = new StringBuilder();
+            sb.Append($"IsWindowFocused: {GameWindow.IsWindowFocused}\n");
             sb.Append($"IsGamePaused: {GameSettings.IsGamePaused}\n");
             sb.Append($"SoundVolume: {GameSettings.SoundVolume}\n");
             sb.Append($"MusicVolume: {GameSettings.MusicVolume}\n");
@@ -71,7 +74,10 @@ namespace RageAudio
             sb.Append($"SoundOutputMode: {GameSettings.SoundOutputMode}\n");
             sb.Append($"MuteSoundOnFocusLost: {GameSettings.MuteSoundOnFocusLost}\n");
 
-            GTA.UI.Screen.ShowHelpText(sb.ToString());;
+            //GTA.UI.Screen.ShowHelpText(sb.ToString());
+            //GTA.UI.Screen.ShowSubtitle($"{Game.Player.Character.CurrentVehicle?.MemoryAddress.ToString("X")}");
+
+            // TODO: Reverb in tunnels
         }
     }
 }

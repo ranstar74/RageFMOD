@@ -2,8 +2,10 @@
 using FMOD.Studio;
 using GTA;
 using RageAudio.Helpers;
+using RageAudio.Memory.Classes;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace RageAudio
 {
@@ -89,6 +91,11 @@ namespace RageAudio
         private readonly List<Bank> loadedBanks = new List<Bank>();
 
         /// <summary>
+        /// List of all loaded plugins.
+        /// </summary>
+        private List<uint> loadedPlugins = new List<uint>();
+
+        /// <summary>
         /// Static constructor of <see cref="AudioPlayer"/>.
         /// </summary>
         static AudioPlayer()
@@ -113,7 +120,94 @@ namespace RageAudio
             LogHelper.Log(this, "System Init", sysInit);
             LogHelper.Log(this, "Get Core", getCore);
 
+            InitializeDebugging();
+            InitializeOutput();
+            LoadAllPlugins();
+
             AudioPlayers.Add(this);
+        }
+
+        /// <summary>
+        /// Initializes output parameters.
+        /// </summary>
+        private void InitializeOutput()
+        {
+            SPEAKERMODE speakerMode = SPEAKERMODE.DEFAULT;
+            
+            // TODO: Find better way handling output mode
+            switch(GameSettings.SoundOutputMode)
+            {
+                case Memory.Enums.SoundOutput.Headphones:
+                case Memory.Enums.SoundOutput.TV:
+                case Memory.Enums.SoundOutput.StereoSpeakers:
+                    {
+                        speakerMode = SPEAKERMODE.STEREO;
+                        break;
+                    }
+                case Memory.Enums.SoundOutput.SurroundSpeakers:
+                    {
+                        speakerMode = SPEAKERMODE.SURROUND;
+                        break;
+                    }
+            }
+
+            CoreSystem.setSoftwareFormat(44100, speakerMode, 2);
+            CoreSystem.setOutput(OUTPUTTYPE.AUTODETECT);
+        }
+
+        /// <summary>
+        /// Initializes FMOD debugging.
+        /// </summary>
+        private void InitializeDebugging()
+        {
+            // FIXME:
+            /*
+             * This function will return FMOD_ERR_UNSUPPORTED when using the non-logging (release) versions of FMOD.
+             * The logging version of FMOD can be recognized by the 'L' suffix in the library name, fmodL.dll or libfmodL.so for instance.
+            */
+
+            RESULT debugInit = Debug.Initialize(DEBUG_FLAGS.WARNING | DEBUG_FLAGS.ERROR, DEBUG_MODE.CALLBACK, (_, __, ___, func, msg) =>
+            {
+                string action = new StringWrapper(func);
+                string result = new StringWrapper(msg);
+
+                LogHelper.Log(action, result);
+
+                return RESULT.OK;
+            });
+            LogHelper.Log(this, "Debug Init", debugInit);
+        }
+
+        /// <summary>
+        /// Unloads all plugins loaded in memory.
+        /// </summary>
+        private void UnloadAllPlugins()
+        {
+            for(int i = 0; i < loadedPlugins.Count; i++)
+            {
+                CoreSystem.unloadPlugin(loadedPlugins[i]);
+            }
+            loadedPlugins.Clear();
+        }
+
+        /// <summary>
+        /// Loads all plugins into memory.
+        /// </summary>
+        private void LoadAllPlugins()
+        {
+            string pluginsPath = "scripts/FMODPlugins/";
+
+            string[] pluginFiles = Directory.GetFiles(pluginsPath, "*.dll");
+
+            for(int i = 0; i < pluginFiles.Length; i++)
+            {
+                string pluginPath = pluginFiles[i];
+
+                RESULT loadPlugin =  CoreSystem.loadPlugin(pluginPath, out uint handle);
+                LogHelper.Log(this, $"Load Plugin: {pluginPath}", loadPlugin);
+
+                loadedPlugins.Add(handle);
+            }
         }
 
         /// <summary>
@@ -150,65 +244,55 @@ namespace RageAudio
         /// </summary>
         private void UpdateListener()
         {
-            ATTRIBUTES_3D listenerAttributes;
-
-            if (World.RenderingCamera.IsActive)
-            {
-                listenerAttributes = World.RenderingCamera.Get3DAttributes();
-            }
-            else
-            {
-                listenerAttributes = FmodHelpers.GetGamePlayer3DAttributes();
-            }
-
-            System.setListenerAttributes(0, listenerAttributes);
+            System.setListenerAttributes(0, AudioListener.Fmod3dAttributes);
         }
 
         /// <summary>
         /// Creates a new instance of <see cref="AudioSource"/> with given bank.
         /// </summary>
-        /// <remarks>
-        /// Example: CreateAudioSource("AudioSound, AudioSound.strings");
-        /// </remarks>
-        /// <param name="bankName">Bank name relative to <see cref="BankDirectory"/> without extension.</param>
-        /// <param name="stringsBankName">String bank name relative to <see cref="BankDirectory"/> without extension.</param>
         /// <param name="entity">Source of the sound. If set to null, sound plays in 2D.</param>
         /// <returns>A new instance of <see cref="AudioSource"/>.</returns>
-        public AudioSource CreateAudioSource(string bankName, string stringsBankName, Entity entity)
+        public AudioSource CreateAudioSource(Entity entity)
         {
-            string mainBank = $@"{BankDirectory}\{bankName}.bank";
-            string stringsBank = $@"{BankDirectory}\{stringsBankName}.bank";
+            AudioSource audioSource = new AudioSource(this, entity);
+            AudioSources.Add(audioSource);
+            return audioSource;
+        }
 
+        /// <summary>
+        /// Loads bank by name.
+        /// </summary>
+        /// <param name="name">Full path to the bank including extension.</param>
+        public void LoadBank(string name)
+        {
             bool loaded = false;
-            for(int i = 0; i < loadedBanks.Count; i++)
+            for (int i = 0; i < loadedBanks.Count; i++)
             {
                 Bank bank = loadedBanks[i];
                 bank.getPath(out string path);
 
-                if(path.Contains(bankName))
+                if (path?.Contains(name) == true)
                 {
                     loaded = true;
-                    continue;
-                }    
+                    break;
+                }
             }
 
-            if(!loaded)
+            if (!loaded)
             {
-                var mainBankLoad = System.loadBankFile(mainBank, LOAD_BANK_FLAGS.NORMAL, out Bank bankMain);
-                var stringBankLoad = System.loadBankFile(stringsBank, LOAD_BANK_FLAGS.NORMAL, out Bank bankString);
+                RESULT bankLoad = System.loadBankFile(name, LOAD_BANK_FLAGS.NORMAL, out Bank bank);
+                RESULT bankLoadSample = bank.loadSampleData();
 
-                loadedBanks.Add(bankMain);
-                loadedBanks.Add(bankString);
+                loadedBanks.Add(bank);
 
-                LogHelper.Log(this, $"Load Bank: {bankName}", mainBankLoad);
-                LogHelper.Log(this, $"Load String Bank", stringBankLoad);
+                bank.getEventCount(out int eventCount);
+
+                LogHelper.Log(this, $"Load Bank: {name}", bankLoad);
+                LogHelper.Log(this, $"Load Bank Sample Data", bankLoadSample);
+                LogHelper.Log(this, $"Found {eventCount} Events", RESULT.OK);
             }
             else
                 LogHelper.Log(this, $"Banks already loaded... skipping", RESULT.OK);
-
-            AudioSource audioSource = new AudioSource(this, entity);
-            AudioSources.Add(audioSource);
-            return audioSource;
         }
 
         /// <summary>
@@ -226,6 +310,8 @@ namespace RageAudio
                 bank.unload();
                 bank.unloadSampleData();
             }
+            UnloadAllPlugins();
+
             System.unloadAll();
             System.release();
 
