@@ -64,6 +64,13 @@ namespace RageAudio
                 ForwardVector = GameplayCamera.ForwardVector;
             }
 
+            // Use vehicle position to prevent "doppler" bugs,
+            // like when you move camera and it affects its velocity
+            if(Game.Player.Character.IsInVehicle())
+            {
+                Position = Game.Player.Character.CurrentVehicle.Position;
+            }
+
             /*
              * For velocity, remember to use units per second, and not units per frame. 
              * This is a common mistake and will make the doppler effect sound wrong if 
@@ -74,7 +81,7 @@ namespace RageAudio
              *   velocity_units_per_second = (position_currentframe - position_lastframe) / time_taken_since_last_frame_in_seconds.
              *   At 60fps the formula would look like velocity_units_per_second = (position_currentframe - position_lastframe) / 0.0166667.
              */
-            Velocity = (Position - previousPosition) * Game.LastFrameTime;
+            Velocity = (Position - previousPosition) / Game.LastFrameTime;
 
             Fmod3dAttributes = new ATTRIBUTES_3D()
             {

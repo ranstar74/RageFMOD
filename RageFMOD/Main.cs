@@ -2,6 +2,7 @@
 using GTA.Native;
 using RageAudio.Memory.Classes;
 using System;
+using System.Drawing;
 using System.Text;
 using System.Threading;
 
@@ -66,16 +67,24 @@ namespace RageAudio
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.Append($"IsWindowFocused: {GameWindow.IsWindowFocused}\n");
-            sb.Append($"IsGamePaused: {GameSettings.IsGamePaused}\n");
-            sb.Append($"SoundVolume: {GameSettings.SoundVolume}\n");
-            sb.Append($"MusicVolume: {GameSettings.MusicVolume}\n");
-            sb.Append($"DialogBoost: {GameSettings.DialogBoost}\n");
-            sb.Append($"SoundOutputMode: {GameSettings.SoundOutputMode}\n");
-            sb.Append($"MuteSoundOnFocusLost: {GameSettings.MuteSoundOnFocusLost}\n");
+            //sb.Append($"IsWindowFocused: {GameWindow.IsWindowFocused}\n");
+            //sb.Append($"IsGamePaused: {GameSettings.IsGamePaused}\n");
+            //sb.Append($"SoundVolume: {GameSettings.SoundVolume}\n");
+            //sb.Append($"MusicVolume: {GameSettings.MusicVolume}\n");
+            //sb.Append($"DialogBoost: {GameSettings.DialogBoost}\n");
+            //sb.Append($"SoundOutputMode: {GameSettings.SoundOutputMode}\n");
+            //sb.Append($"MuteSoundOnFocusLost: {GameSettings.MuteSoundOnFocusLost}\n");
+            Vehicle veh = Game.Player.Character.CurrentVehicle;
+            if (Game.Player.Character.IsInVehicle())
+            {
+                sb.Append($"Current Vehicle: {veh.MemoryAddress.ToString("X")}\n");
+                sb.Append($"Reverb Level: 0.0\n");
+                sb.Append($"Echo Level: 0.0\n");
+                //sb.Append($"Listener velocity: {AudioListener.Velocity.Length():0}\n");
+                //sb.Append($"Vehicle velocity: {veh.Velocity.Length():0}\n");
 
-            //GTA.UI.Screen.ShowHelpText(sb.ToString());
-            //GTA.UI.Screen.ShowSubtitle($"{Game.Player.Character.CurrentVehicle?.MemoryAddress.ToString("X")}");
+                GTA.UI.Screen.ShowHelpText(sb.ToString(), 1, false, false);
+            }
 
             // TODO: Reverb in tunnels
         }

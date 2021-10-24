@@ -15,9 +15,17 @@ namespace RageAudio
     public class AudioPlayer : IDisposable
     {
         /// <summary>
-        /// Path of directory with Fmod banks.
+        /// Fmod Sudio instance.
         /// </summary>
-        public readonly string BankDirectory;
+        /// <remarks>
+        /// Use it only if features that are not supported by this played required.
+        /// </remarks>
+        public readonly FMOD.Studio.System System;
+
+        /// <summary>
+        /// Fmod Core instance.
+        /// </summary>
+        public readonly FMOD.System CoreSystem;
 
         private static bool isPaused;
         /// <summary>
@@ -58,22 +66,9 @@ namespace RageAudio
         }
 
         /// <summary>
-        /// Fmod Sudio instance.
+        /// Volume based on game settings. Automatically set to 0 if game is paused.
         /// </summary>
-        /// <remarks>
-        /// Use it only if features that are not supported by this played required.
-        /// </remarks>
-        public readonly FMOD.Studio.System System;
-
-        /// <summary>
-        /// Fmod Core instance.
-        /// </summary>
-        public readonly FMOD.System CoreSystem;
-
-        /// <summary>
-        /// Whether this <see cref="AudioPlayer"/> is disposed or not.
-        /// </summary>
-        public bool IsDisposed { get; private set; }
+        public float CurrentVolume { get; private set; }
 
         /// <summary>
         /// List of all created <see cref="AudioSource"/> instances.
@@ -96,6 +91,11 @@ namespace RageAudio
         private List<uint> loadedPlugins = new List<uint>();
 
         /// <summary>
+        /// Whether this <see cref="AudioPlayer"/> is disposed or not.
+        /// </summary>
+        public bool IsDisposed { get; private set; }
+
+        /// <summary>
         /// Static constructor of <see cref="AudioPlayer"/>.
         /// </summary>
         static AudioPlayer()
@@ -107,13 +107,10 @@ namespace RageAudio
         /// <summary>
         /// Creates a new instance of <see cref="AudioPlayer"/>.
         /// </summary>
-        /// <param name="bankDirectory">Path of directory with Fmod banks.</param>
-        public AudioPlayer(string bankDirectory)
+        public AudioPlayer()
         {
-            BankDirectory = bankDirectory;
-
             RESULT sysCreate = FMOD.Studio.System.create(out System);
-            RESULT sysInit = System.initialize(1024, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS._3D_RIGHTHANDED, IntPtr.Zero);
+            RESULT sysInit = System.initialize(1024, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
             RESULT getCore = System.getCoreSystem(out CoreSystem);
 
             LogHelper.Log(this, "System Create", sysCreate);
@@ -162,11 +159,14 @@ namespace RageAudio
         {
             // FIXME:
             /*
-             * This function will return FMOD_ERR_UNSUPPORTED when using the non-logging (release) versions of FMOD.
-             * The logging version of FMOD can be recognized by the 'L' suffix in the library name, fmodL.dll or libfmodL.so for instance.
+             * This function will return FMOD_ERR_UNSUPPORTED 
+             *  when using the non-logging (release) versions of FMOD.
+             * The logging version of FMOD can be recognized by the 'L' suffix in the library name, 
+             *  fmodL.dll or libfmodL.so for instance.
             */
 
-            RESULT debugInit = Debug.Initialize(DEBUG_FLAGS.WARNING | DEBUG_FLAGS.ERROR, DEBUG_MODE.CALLBACK, (_, __, ___, func, msg) =>
+            DEBUG_FLAGS debugFlags = DEBUG_FLAGS.WARNING | DEBUG_FLAGS.ERROR;
+            RESULT debugInit = Debug.Initialize(debugFlags, DEBUG_MODE.CALLBACK, (_, __, ___, func, msg) =>
             {
                 string action = new StringWrapper(func);
                 string result = new StringWrapper(msg);
@@ -224,8 +224,25 @@ namespace RageAudio
             */
             UpdateListener();
             UpdateSources();
+            UpdateVolume();
 
             System.update();
+        }
+
+        /// <summary>
+        /// Update <see cref="CurrentVolume"/>.
+        /// </summary>
+        private void UpdateVolume()
+        {
+            float volume = GameSettings.SoundVolume;
+            if (GameSettings.MuteSoundOnFocusLost)
+                if (!GameWindow.IsWindowFocused)
+                    volume = 0f;
+
+            // TODO: Remove 1f
+            volume = 1f;
+
+            CurrentVolume = volume;
         }
 
         /// <summary>

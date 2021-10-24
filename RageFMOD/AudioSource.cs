@@ -1,6 +1,7 @@
 ﻿using FMOD;
 using FMOD.Studio;
 using GTA;
+using GTA.Math;
 using RageAudio.Helpers;
 using RageAudio.Memory.Classes;
 using System;
@@ -34,6 +35,21 @@ namespace RageAudio
         public readonly Entity SourceEntity;
 
         /// <summary>
+        /// Velocity vector of the <see cref="SourceEntity"/> per second.
+        /// </summary>
+        public Vector3 SourceVelocity { get; private set; }
+
+        /// <summary>
+        /// Previous frame <see cref="SourceEntity.Position"/>.
+        /// </summary>
+        private Vector3 previousPosition;
+
+        /// <summary>
+        /// <see cref="ATTRIBUTES_3D"/> of the <see cref="SourceEntity"/>.
+        /// </summary>
+        public static ATTRIBUTES_3D Fmod3dAttributes { get; private set; }
+
+        /// <summary>
         /// Whether <see cref="AudioEvent"/> is disposed or not.
         /// </summary>
         public bool IsDisposed { get; private set; }
@@ -54,32 +70,46 @@ namespace RageAudio
         /// </summary>
         internal void Update()
         {
-            for(int i = 0; i < AudioEvents.Count; i++)
+            UpdateAttributes();
+
+            for (int i = 0; i < AudioEvents.Count; i++)
             {
                 AudioEvent audioEvent = AudioEvents[i];
 
-                float volume = GameSettings.SoundVolume;
-                if (GameSettings.MuteSoundOnFocusLost)
-                    if (!GameWindow.IsWindowFocused)
-                        volume = 0f;
-
-                // TODO: Remove 1f
-                volume = 1f;
-                audioEvent.EventInstance.set3DAttributes(SourceEntity.Get3DAttributes());
-                audioEvent.EventInstance.setVolume(volume);
+                audioEvent.EventInstance.set3DAttributes(Fmod3dAttributes);
+                audioEvent.EventInstance.setVolume(AudioPlayer.CurrentVolume);
 
                 if (AudioPlayer.IsPaused)
                     audioEvent.Pause();
                 else
                     audioEvent.Resume();
             }
+
+            previousPosition = SourceEntity.Position;
+        }
+
+        /// <summary>
+        /// Updates <see cref="Fmod3dAttributes"/>.
+        /// </summary>
+        private void UpdateAttributes()
+        {
+            SourceVelocity = (SourceEntity.Position - previousPosition) / Game.LastFrameTime;
+
+            Fmod3dAttributes = new ATTRIBUTES_3D()
+            {
+                // Not sure why but its inverted by default
+                forward = (-SourceEntity.ForwardVector).ToFmodVector(),
+                position = SourceEntity.Position.ToFmodVector(),
+                up = SourceEntity.UpVector.ToFmodVector(),
+                velocity = SourceVelocity.ToFmodVector()
+            };
         }
 
         /// <summary>
         /// Creates a new <see cref="AudioEvent"/> that will be played on this <see cref="AudioSource"/>.
         /// </summary>
         /// <remarks>
-        /// Event name is given according to Fmod Studio hierrarchy, for example: AmbientSounds/Wind
+        /// Path or Guid of the event accorduing to GUIDs.txt file.
         /// </remarks>
         /// <param name="eventName">Event name to create instance of.</param>
         /// <param name="autoPlay">If set to True, playback will be automatically started.</param>
