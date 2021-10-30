@@ -26,14 +26,39 @@ namespace RageAudio
         public AudioPlayer AudioPlayer => AudioSource.AudioPlayer;
 
         /// <summary>
-        /// Whether <see cref="AudioEvent"/> is disposed or not.
+        /// <see cref="ChannelGroup"/> <see cref="EventInstance"/> belongs to.
         /// </summary>
-        public bool IsDisposed { get; private set; }
+        public ChannelGroup ChannelGroup { get; private set; }
+
+        /// <summary>
+        /// Echo Dsp for the sound.
+        /// </summary>
+        public readonly FMOD.DSP DspEcho;
+
+        /// <summary>
+        /// Reverb Dsp for the sound.
+        /// </summary>
+        public readonly FMOD.DSP DspReverb;
+
+        /// <summary>
+        /// Invokes after event was loaded.
+        /// </summary>
+        public Action OnLoaded { get; set; }
 
         /// <summary>
         /// Whether playback event is paused or not.
         /// </summary>
         private bool isPaused;
+
+        /// <summary>
+        /// Whether event is loaded or not.
+        /// </summary>
+        public bool IsLoaded { get; private set; }
+
+        /// <summary>
+        /// Whether <see cref="AudioEvent"/> is disposed or not.
+        /// </summary>
+        public bool IsDisposed { get; private set; }
 
         /// <summary>
         /// Creates a new instance of <see cref="AudioEvent"/> on given <see cref="AudioSource"/>.
@@ -44,6 +69,36 @@ namespace RageAudio
         {
             AudioSource = audioSource;
             EventInstance = eventInstance;
+
+            AudioPlayer.CoreSystem.createDSPByType(DSP_TYPE.ECHO, out DspEcho);
+            AudioPlayer.CoreSystem.createDSPByType(DSP_TYPE.SFXREVERB, out DspReverb);
+
+            DspEcho.setActive(true);
+            DspReverb.setActive(true);
+        }
+
+        /// <summary>
+        /// Checks event loading state.
+        /// </summary>
+        internal void Update()
+        {
+            if (IsLoaded)
+                return;
+
+            RESULT getChannelGroup = EventInstance.getChannelGroup(out ChannelGroup channelGroup);
+
+            if (getChannelGroup == RESULT.ERR_STUDIO_NOT_LOADED)
+                return;
+
+            LogHelper.Log(AudioPlayer, $"Get Channel Group", getChannelGroup);
+
+            IsLoaded = getChannelGroup == RESULT.OK;
+
+            ChannelGroup = channelGroup;
+            OnLoaded?.Invoke();
+
+            ChannelGroup.addDSP(0, DspEcho);
+            ChannelGroup.addDSP(0, DspReverb);
         }
 
         /// <summary>
@@ -113,6 +168,9 @@ namespace RageAudio
         /// </summary>
         public void Dispose()
         {
+            DspEcho.release();
+            DspReverb.release();
+
             EventInstance.stop(STOP_MODE.IMMEDIATE);
             EventInstance.clearHandle();
 
