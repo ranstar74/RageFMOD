@@ -1,7 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
-
-namespace RageAudio.Memory.Classes
+﻿namespace RageAudio.Memory.Classes
 {
     /// <summary>
     /// Contains various information about game window.
@@ -9,21 +6,13 @@ namespace RageAudio.Memory.Classes
     internal static class GameWindow
     {
         /// <summary>
-        /// Returns True if game window is focused, otherwise False.
+        /// Returns True If Game Window is Focused, Otherwise False.
         /// </summary>
         public static bool IsWindowFocused
         {
             get
             {
-                // FIXME: TEMP FIX
-                return true;
-
-                if (NativeMemory.IsWindowFocusedAddr == IntPtr.Zero)
-                {
-                    return false;
-                }
-
-                return Convert.ToBoolean(Marshal.ReadByte(NativeMemory.IsWindowFocusedAddr));
+                return NativeMemory.Get<bool>(NativeMemory.IsGameWindowFocusedAddr);
             }
         }
     }

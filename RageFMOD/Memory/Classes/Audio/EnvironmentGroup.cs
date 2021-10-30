@@ -1,44 +1,49 @@
-﻿using System;
+﻿using RageAudio.Memory.Interfaces;
+using System;
 
 namespace RageAudio.Memory.Classes.Audio
 {
     /// <summary>
     /// Stores information about environment group such as reverb or echo.
     /// </summary>
-    public class EnvironmentGroup
+    public class EnvironmentGroup : INativeMemory
     {
         /// <summary>
         /// Gets the memory address where the <see cref="EnvironmentGroup"/> is stored in memory.
         /// </summary>
-        public readonly IntPtr MemoryAddress;
+        public IntPtr MemoryAddress { get; }
 
         /// <summary>
         /// Audio reverb amount.
         /// </summary>
-        public float Reverb;
+        public float Reverb
+        {
+            get => NativeMemory.Get<float>(MemoryAddress, NativeMemory.ReverbOffset);
+        }
+
+        /// <summary>
+        /// Environment audio reverb amount.
+        /// </summary>
+        public float EnvironmentReverb
+        {
+            get => NativeMemory.Get<float>(MemoryAddress, NativeMemory.EnvironmentReverbOffset);
+        }
 
         /// <summary>
         /// Echo reverb amount.
         /// </summary>
         public float Echo
         {
-            get => NativeMemory.Get<float>(VehicleAudio.Vehicle.MemoryAddress, NativeMemory.EnvironmentGroupOffset);
+            get => NativeMemory.Get<float>(MemoryAddress, NativeMemory.EchoOffset);
         }
 
         /// <summary>
-        /// Owner of this environment group.
+        /// Creates an <see cref="EnvironmentGroup"/> instance from given pointer.
         /// </summary>
-        public readonly VehicleAudio VehicleAudio;
-
-        /// <summary>
-        /// Creates an <see cref="EnvironmentGroup"/> instance for given <see cref="VehicleAudio"/>.
-        /// </summary>
-        /// <param name="vehicleAudio"><see cref="VehicleAudio"/> context.</param>
-        public EnvironmentGroup(VehicleAudio vehicleAudio)
+        /// <param name="memoryAddress">Pointer to the <see cref="EnvironmentGroup"/>.</param>
+        public EnvironmentGroup(IntPtr memoryAddress)
         {
-            VehicleAudio = vehicleAudio;
-
-            MemoryAddress = vehicleAudio.MemoryAddress + NativeMemory.EnvironmentGroupOffset;
+            MemoryAddress = memoryAddress;
         }
     }
 }

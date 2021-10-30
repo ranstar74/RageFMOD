@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using GTA.Math;
 
 namespace RageAudio.Memory.Classes
 {
@@ -12,6 +7,16 @@ namespace RageAudio.Memory.Classes
     /// </summary>
     internal static class GameWorld
     {
-
+        /// <summary>
+        /// Position of current rendering camera, it could be one of these:
+        /// GameplayCamera, Custom Camera, Cinematic Camera
+        /// </summary>
+        public static Vector3 RenderingCamPosition
+        {
+            get
+            {
+                return Vector3.Zero;//NativeMemory.Get<Vector3>(NativeMemory.CViewportGameAddr);
+            }
+        }
     }
 }

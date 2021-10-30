@@ -1,8 +1,10 @@
-﻿using RageAudio.Helpers;
+﻿using GTA.Math;
+using RageAudio.Helpers;
+using RageAudio.Memory.Classes;
+using RageAudio.Memory.Interfaces;
 using RageAudio.Memory.Tools;
 using System;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace RageAudio.Memory
 {
@@ -12,18 +14,13 @@ namespace RageAudio.Memory
 	/// <remarks>
 	/// VER_1_0_2372_0_STEAM
 	/// </remarks>
-    internal static class NativeMemory
+    internal unsafe static class NativeMemory
     {
-        public static readonly IntPtr IsGamePaused;
-
-        public static readonly IntPtr HudInfoAddr;
-      
-        public const int IsPlayerSwitchInProgressOffset = 0xA;
-        public const int IsPlayerSelectorOpenedOffset = 0x29;
-
-        public static readonly IntPtr IsWindowFocusedAddr;
+        // Scan addresses
 
         public static readonly IntPtr GameSettingsAddr;
+        public static readonly IntPtr IsGameWindowFocusedAddr;
+        public static readonly IntPtr CViewportGameAddr;
 
         // GameSettings -> Audio
         public const int SoundVolumeOffset = 0x0;
@@ -54,6 +51,11 @@ namespace RageAudio.Memory
 
         // Audio
         public const int EnvironmentGroupOffset = 0x38;
+        public const int ReverbOffset = 0x38;
+        public const int EchoOffset = 0x3C;
+        public const int EnvironmentReverbOffset = 0xB8;
+
+        public static CViewportGame* CViewportGame;
 
         /// <summary>
         /// Scans game memory.
@@ -63,35 +65,45 @@ namespace RageAudio.Memory
             unsafe
             {
                 Pattern pattern;
+                IntPtr address;
+                int offset;
 
-                //pattern = new Pattern(
-                //     "\x03\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x90",
-                //     "xxxxxxxxxxxxxxxxxxxxx");
-                // HudInfoAddr = (IntPtr)pattern.Get().ToPointer();
-                // LogHelper.Log(HudInfoAddr, nameof(HudInfoAddr));
-                IsGamePaused = IntPtr.Zero;
-
-                // ---
-                HudInfoAddr = IntPtr.Zero;
-                //pattern = new Pattern(
-                //    "\x80\x69\x00\x00\xf7\x7f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x2e\x3f\x41\x56\x53\x68\x00\x00\x00\x00\x56",
-                //    "xx??xx?xxxxxxxxxxxxxxx????x");
-                //IsWindowFocusedAddr = (IntPtr)pattern.Get().ToPointer() + 0xB3;
-                //LogHelper.Log(IsWindowFocusedAddr, nameof(IsWindowFocusedAddr));
-
-                //pattern = new Pattern("\x18\x40\x00\x55\xf7\x7f\x00\x00\x60",
-                //    "xx?xxx?xx");
-                //IsWindowFocusedAddr = (IntPtr)pattern.Get().ToPointer() - 0x4D5;
-                //LogHelper.Log(IsWindowFocusedAddr, nameof(IsWindowFocusedAddr));
-                IsWindowFocusedAddr = IntPtr.Zero;
-
-                // ---
+                // GameSettings
 
                 pattern = new Pattern(
-                    "\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x05",
-                    "x?x?x?x?xxx?x?x?x?x?x");
-                GameSettingsAddr = (IntPtr)pattern.Get().ToPointer() + 0x1C; // mov [r10+28],edx
+                    "\x4c\x8d\x15\x00\x00\x00\x00\x48\x63\xc1\x45\x8b\x04\x82",
+                    "xxx????xxxxxxx");
+                address = pattern.Get(3);
+                offset = *(int*)address;
+                GameSettingsAddr = address + offset + 4 + 0x1C;
+
                 LogHelper.Log(GameSettingsAddr, nameof(GameSettingsAddr));
+
+                // IsGameWindowFocused
+                pattern = new Pattern(
+                    "\x88\x05\x00\x00\x00\x00\xf6\xd8\x1a\xc0",
+                    "xx????xxxx");
+                address = pattern.Get(2);
+                offset = *(int*)address;
+                IsGameWindowFocusedAddr = address + offset + 4;
+
+                LogHelper.Log(IsGameWindowFocusedAddr, nameof(IsGameWindowFocusedAddr));
+
+                // ViewportGame
+
+                pattern = new Pattern(
+                    "\x48\x8b\x0d\x00\x00\x00\x00\x48\x83\xc1\x00\xf3\x0f\x10\x9b\x00\x00\x00\x00\xf3\x0f\x10\x93",
+                    "xxx????xxx?xxxx????xxxx");
+                address = pattern.Get(3);
+                offset = *(int*)address;
+                CViewportGameAddr = address + offset + 4;
+
+                LogHelper.Log(CViewportGameAddr, nameof(CViewportGameAddr));
+
+                if (CViewportGameAddr != IntPtr.Zero)
+                {
+                    CViewportGame = *(CViewportGame**)CViewportGameAddr;
+                }
             }
         }
 
@@ -105,30 +117,53 @@ namespace RageAudio.Memory
         /// Value from given pointer. 
         /// In case if base address is nullptr, it returns default value.
         /// </returns>
-        public static T Get<T>(IntPtr baseAddr, int offset = 0)
+        public static unsafe T Get<T>(IntPtr baseAddr, int offset = 0)
         {
-            T defaultValue = Activator.CreateInstance<T>();
+            IntPtr addr = baseAddr + offset;
+            Type tType = typeof(T);
+            T defaultValue;
 
-            // Addresses below 0x1000 most likely are NullPtr
-            if (baseAddr.ToInt32() <= 0x1000 || baseAddr == null)
+            // TODO: Move to extension
+            if(tType.GetInterface(nameof(INativeMemory)) != null)
+            {
+                defaultValue = (T) Activator.CreateInstance(tType, *(IntPtr*)addr.ToPointer());
+            }
+            else
+            {
+                defaultValue = Activator.CreateInstance<T>();
+            }
+
+            if (baseAddr == IntPtr.Zero)
                 return defaultValue;
 
-            IntPtr addr = baseAddr + offset;
+            if (baseAddr == null)
+                return defaultValue;
 
-            Type tType = typeof(T);
+            // Addresses below 0x1000 most likely are NullPtr
+            if (baseAddr.ToInt64() <= 0x1000)
+                return defaultValue;
 
-            unsafe
+            if (tType == typeof(byte))
+                return (T)Convert.ChangeType(Marshal.ReadByte(addr), typeof(byte));
+            else if (tType == typeof(Int16))
+                return (T)Convert.ChangeType(Marshal.ReadInt16(addr), typeof(Int16));
+            else if (tType == typeof(Int32))
+                return (T)Convert.ChangeType(Marshal.ReadInt32(addr), typeof(Int32));
+            else if (tType == typeof(Int64))
+                return (T)Convert.ChangeType(Marshal.ReadInt64(addr), typeof(Int64));
+            else if (tType == typeof(float))
+                return (T)Convert.ChangeType(*(float*)addr, tType);
+            else if(tType == typeof(bool))
+                return (T)Convert.ChangeType(*(bool*)addr, tType);
+            else if(tType == typeof(Vector3))
             {
-                if (tType == typeof(byte))
-                    return (T)Convert.ChangeType(Marshal.ReadByte(addr), typeof(byte));
-                else if (tType == typeof(Int16))
-                    return (T)Convert.ChangeType(Marshal.ReadInt16(addr), typeof(Int16));
-                else if (tType == typeof(Int32))
-                    return (T)Convert.ChangeType(Marshal.ReadInt32(addr), typeof(Int32));
-                else if (tType == typeof(Int64))
-                    return (T)Convert.ChangeType(Marshal.ReadInt64(addr), typeof(Int64));
-                else return defaultValue;
+                float x = Get<float>(baseAddr);
+                float y = Get<float>(baseAddr, 0x4);
+                float z = Get<float>(baseAddr, 0x8);
+
+                return (T)Convert.ChangeType(new Vector3(x, y, z), typeof(Vector3));
             }
+            else return defaultValue;
         }
     }
 }

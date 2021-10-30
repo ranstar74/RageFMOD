@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace RageAudio.Memory.Tools
 {
@@ -7,7 +9,7 @@ namespace RageAudio.Memory.Tools
     /// </summary>
     public sealed class Pattern
     {
-        private readonly string _bytes, _mask;
+        private readonly char[] _bytes, _mask;
 
         /// <summary>
         /// Creates a new instance of <see cref="Pattern"/> with given pattern and mask.
@@ -15,6 +17,17 @@ namespace RageAudio.Memory.Tools
         /// <param name="bytes">Hex pattern.</param>
         /// <param name="mask">Pattern mask.</param>
         public Pattern(string bytes, string mask)
+        {
+            _bytes = bytes.ToCharArray();
+            _mask = mask.ToCharArray();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Pattern"/> with given pattern and mask.
+        /// </summary>
+        /// <param name="bytes">Hex pattern.</param>
+        /// <param name="mask">Pattern mask.</param>
+        public Pattern(char[] bytes, char[] mask)
         {
             _bytes = bytes;
             _mask = mask;
@@ -27,9 +40,11 @@ namespace RageAudio.Memory.Tools
         /// <returns>Pointer to value.</returns>
         public unsafe IntPtr Get(int offset = 0)
         {
-            ModuleInfo module;
-
-            Win32Native.GetModuleInformation(Win32Native.GetCurrentProcess(), Win32Native.GetModuleHandle(null), out module, (uint)sizeof(ModuleInfo));
+            Win32Native.GetModuleInformation(
+                Win32Native.GetCurrentProcess(),
+                Win32Native.GetModuleHandle(null),
+                out ModuleInfo module,
+                (uint)sizeof(ModuleInfo));
 
             var address = module.lpBaseOfDll.ToInt64();
 
@@ -37,7 +52,7 @@ namespace RageAudio.Memory.Tools
 
             for (; address < end; address++)
             {
-                if (BCompare((byte*)(address), _bytes.ToCharArray(), _mask.ToCharArray()))
+                if (BCompare((byte*)(address), _bytes, _mask))
                 {
                     return new IntPtr(address + offset);
                 }

@@ -1,4 +1,5 @@
 ﻿using GTA;
+using RageAudio.Memory.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,33 +11,26 @@ namespace RageAudio.Memory.Classes.Audio
     /// <summary>
     /// Stores information about vehicle audio.
     /// </summary>
-    public class VehicleAudio
+    public class VehicleAudio : INativeMemory
     {
         /// <summary>
-        /// Gets the memory address where the <see cref="VehicleAudio"/> is stored in memory.
+        /// Gets the memory address of the <see cref="VehicleAudio"/>.
         /// </summary>
-        public readonly IntPtr MemoryAddress;
+        public IntPtr MemoryAddress { get; }
 
         /// <summary>
-        /// Owner of this audio.
-        /// </summary>
-        public readonly Vehicle Vehicle;
-
-        /// <summary>
-        /// <see cref="EnvironmentGroup"/> of this audio.
+        /// <see cref="EnvironmentGroup"/> instance of the <see cref="VehicleAudio"/>.
         /// </summary>
         public readonly EnvironmentGroup EnvironmentGroup;
 
         /// <summary>
-        /// Creates an <see cref="VehicleAudio"/> instance for given vehicle.
+        /// Creates an <see cref="EnvironmentGroup"/> instance from given pointer.
         /// </summary>
-        /// <param name="vehicle"></param>
-        public VehicleAudio(Vehicle vehicle)
+        /// <param name="memoryAddress">Pointer to the <see cref="VehicleAudio"/>.</param>
+        public VehicleAudio(IntPtr memoryAddress)
         {
-            Vehicle = vehicle;
-
-            MemoryAddress = vehicle.MemoryAddress + NativeMemory.VehicleAudioOffset;
-            EnvironmentGroup = new EnvironmentGroup(this);
+            MemoryAddress = memoryAddress;
+            EnvironmentGroup = NativeMemory.Get<EnvironmentGroup>(MemoryAddress, NativeMemory.EnvironmentGroupOffset);
         }
     }
 }
