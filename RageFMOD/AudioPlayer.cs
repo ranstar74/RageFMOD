@@ -1,5 +1,6 @@
 ﻿using FMOD;
 using FMOD.Studio;
+using FusionLibrary.Extensions;
 using GTA;
 using RageAudio.Helpers;
 using RageAudio.Memory.Classes;
@@ -27,49 +28,6 @@ namespace RageAudio
         /// </summary>
         public readonly FMOD.System CoreSystem;
 
-        private static bool isPaused;
-        /// <summary>
-        /// If True, playback of all events will be paused.
-        /// </summary>
-        /// <remarks>
-        /// Used for pausing sounds during player switch / while in pause menu.
-        /// </remarks>
-        internal static bool IsPaused
-        {
-            get => isPaused;
-            set
-            {
-                if (isPaused == value)
-                    return;
-
-                // Kind of messy way, not sure
-                for(int i = 0; i < AudioPlayers.Count; i++)
-                {
-                    AudioPlayer player = AudioPlayers[i];
-                    for (int k = 0; k < player.AudioSources.Count; k++)
-                    {
-                        AudioSource source = player.AudioSources[k];
-                        for (int g = 0; g < source.AudioEvents.Count; g++)
-                        {
-                            AudioEvent audioEvent = source.AudioEvents[g];
-
-                            if (value)
-                                audioEvent.Pause();
-                            else
-                                audioEvent.Resume();
-                        }
-                    }
-                    player.System.update();
-                }
-                isPaused = value;
-            }
-        }
-
-        /// <summary>
-        /// Volume based on game settings. Automatically set to 0 if game is paused.
-        /// </summary>
-        public float CurrentVolume { get; private set; }
-
         /// <summary>
         /// List of all created <see cref="AudioSource"/> instances.
         /// </summary>
@@ -81,6 +39,50 @@ namespace RageAudio
         public static readonly List<AudioPlayer> AudioPlayers = new List<AudioPlayer>();
 
         /// <summary>
+        /// Whether audio player is currently muted or not.
+        /// </summary>
+        public bool IsMuted { get; private set; }
+
+        private bool isPaused;
+        /// <summary>
+        /// Whether audio player is currently paused or not.
+        /// </summary>
+        public bool IsPaused
+        {
+            get => isPaused;
+            set
+            {
+                if (isPaused == value)
+                    return;
+                
+                // Since its used only for pause menu, we cant use update method
+                // cuz its called from shv thread. So we have to pause all sounds manually
+                for(int i = 0; i < AudioSources.Count; i++)
+                {
+                    AudioSource source = AudioSources[i];
+
+                    for(int k = 0; k < source.AudioEvents.Count; k++)
+                    {
+                        AudioEvent audioEvent = source.AudioEvents[k];
+
+                        audioEvent.ChannelGroup.setPaused(value);
+                    }
+                }
+                isPaused = value;
+            }
+        }
+
+        /// <summary>
+        /// Volume of the audio player.
+        /// </summary>
+        public float Volume { get; set; } = 0.085f;
+
+        /// <summary>
+        /// Volume synced to game settings.
+        /// </summary>
+        internal float GameVolume { get; private set; }
+
+        /// <summary>
         /// All loaded audio banks;
         /// </summary>
         private readonly List<Bank> loadedBanks = new List<Bank>();
@@ -88,7 +90,7 @@ namespace RageAudio
         /// <summary>
         /// List of all loaded plugins.
         /// </summary>
-        private List<uint> loadedPlugins = new List<uint>();
+        private readonly List<uint> loadedPlugins = new List<uint>();
 
         /// <summary>
         /// Whether this <see cref="AudioPlayer"/> is disposed or not.
@@ -230,19 +232,12 @@ namespace RageAudio
         }
 
         /// <summary>
-        /// Update <see cref="CurrentVolume"/>.
+        /// Updates volume and mute state of <see cref="ChannelGroup"/>.
         /// </summary>
         private void UpdateVolume()
         {
-            float volume = GameSettings.SoundVolume;
-            if (GameSettings.MuteSoundOnFocusLost)
-                if (!GameWindow.IsWindowFocused)
-                    volume = 0f;
-
-            // TODO: Remove 1f
-            volume = 1f;
-
-            CurrentVolume = volume;
+            IsMuted = GameSettings.MuteSoundOnFocusLost && !GameWindow.IsWindowFocused;
+            GameVolume = GameSettings.SoundVolume.Remap(0, 1, 0, Volume);
         }
 
         /// <summary>
@@ -273,6 +268,7 @@ namespace RageAudio
         {
             AudioSource audioSource = new AudioSource(this, entity);
             AudioSources.Add(audioSource);
+
             return audioSource;
         }
 
