@@ -7,6 +7,7 @@ using FMOD;
 using GTA;
 using GTA.Math;
 using RageAudio.Helpers;
+using RageAudio.Memory;
 
 namespace RageAudio
 {
@@ -49,20 +50,11 @@ namespace RageAudio
         /// <summary>
         /// Updates current listener position. Must be called every tick.
         /// </summary>
-        public static void Update()
+        public static unsafe void Update()
         {
-            if (World.RenderingCamera.IsActive)
-            {
-                Position = World.RenderingCamera.Position;
-                UpVector = World.RenderingCamera.UpVector;
-                ForwardVector = World.RenderingCamera.ForwardVector;
-            }
-            else
-            {
-                Position = GameplayCamera.Position;
-                UpVector = GameplayCamera.UpVector;
-                ForwardVector = GameplayCamera.ForwardVector;
-            }
+            Position = NativeMemory.CViewportGame->Position;
+            UpVector = NativeMemory.CViewportGame->UpVector;
+            ForwardVector = NativeMemory.CViewportGame->ForwardVector;
 
             /*
              * For velocity, remember to use units per second, and not units per frame. 

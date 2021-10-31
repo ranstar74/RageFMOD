@@ -31,14 +31,24 @@ namespace RageAudio
         public ChannelGroup ChannelGroup { get; private set; }
 
         /// <summary>
-        /// Echo Dsp for the sound.
+        /// Volume of the event in range of 0.0 - 1.0
         /// </summary>
-        public readonly FMOD.DSP DspEcho;
+        public float Volume { get; set; } = 1;
 
         /// <summary>
-        /// Reverb Dsp for the sound.
+        /// Echo Dsp for tunnels and caves.
         /// </summary>
-        public readonly FMOD.DSP DspReverb;
+        public readonly DSP DspEcho;
+
+        /// <summary>
+        /// Reverb Dsp for tunnels.
+        /// </summary>
+        public readonly DSP DspReverb;
+
+        /// <summary>
+        /// Reverb Dsp for the distant sound.
+        /// </summary>
+        public readonly DSP DSPDistanceReverb;
 
         /// <summary>
         /// Invokes after event was loaded.
@@ -72,9 +82,11 @@ namespace RageAudio
 
             AudioPlayer.CoreSystem.createDSPByType(DSP_TYPE.ECHO, out DspEcho);
             AudioPlayer.CoreSystem.createDSPByType(DSP_TYPE.SFXREVERB, out DspReverb);
+            AudioPlayer.CoreSystem.createDSPByType(DSP_TYPE.SFXREVERB, out DSPDistanceReverb);
 
             DspEcho.setActive(true);
             DspReverb.setActive(true);
+            DSPDistanceReverb.setActive(true);
         }
 
         /// <summary>
@@ -99,6 +111,37 @@ namespace RageAudio
 
             ChannelGroup.addDSP(0, DspEcho);
             ChannelGroup.addDSP(0, DspReverb);
+            ChannelGroup.addDSP(0, DSPDistanceReverb);
+
+            // TODO: Add proper presets
+
+            // Echo configuration
+            DspEcho.setParameterFloat((int)DSP_ECHO.DRYLEVEL, 0);
+
+            // Reverb configuration
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.DECAYTIME, 3000);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.EARLYDELAY, 10);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.HFREFERENCE, 5000);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.HFDECAYRATIO, 100);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.DIFFUSION, 50);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.DENSITY, 50);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.LOWSHELFFREQUENCY, 1000);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.LOWSHELFGAIN, 10);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.HIGHCUT, 3400);
+            DspReverb.setParameterFloat((int)DSP_SFXREVERB.EARLYLATEMIX, 72);
+
+            // Distance reverb configuration
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.DECAYTIME, 2700);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.EARLYDELAY, 8);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.LATEDELAY, 12);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.HFREFERENCE, 5000);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.HFDECAYRATIO, 100);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.DIFFUSION, 100);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.DENSITY, 100);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.LOWSHELFFREQUENCY, 250);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.LOWSHELFGAIN, 0);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.HIGHCUT, 10050);
+            DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.EARLYLATEMIX, 56);
         }
 
         /// <summary>
@@ -170,6 +213,7 @@ namespace RageAudio
         {
             DspEcho.release();
             DspReverb.release();
+            DSPDistanceReverb.release();
 
             EventInstance.stop(STOP_MODE.IMMEDIATE);
             EventInstance.clearHandle();

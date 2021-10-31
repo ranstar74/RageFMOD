@@ -7,15 +7,6 @@ namespace RageAudio.Memory.Classes
     [StructLayout(LayoutKind.Explicit, CharSet = CharSet.Ansi)]
 	internal ref struct CViewportGame
 	{
-		[FieldOffset(0x100)]
-		public readonly Vector3 Position;
-
-		[FieldOffset(0x110)]
-		public readonly Vector3 UpVector;
-
-		[FieldOffset(0x130)]
-		public readonly Vector3 BackVector;
-
 		/// <summary>
 		/// On Foot - Ped. 
 		/// In Vehicle - Vehicle.
@@ -23,5 +14,20 @@ namespace RageAudio.Memory.Classes
 		/// </summary>
 		[FieldOffset(0x4E0)]
 		public readonly IntPtr EntityTarget;
+
+		[FieldOffset(0x530)]
+		public readonly Vector3 RightVector;
+
+		[FieldOffset(0x540)]
+		public readonly Vector3 ForwardVector;
+
+		[FieldOffset(0x550)]
+		public readonly Vector3 UpVector;
+
+		[FieldOffset(0x560)]
+		public readonly Vector3 Position;
+
+		[FieldOffset(0x590)]
+		public readonly float Fov;
 	}
 }

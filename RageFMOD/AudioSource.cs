@@ -1,10 +1,11 @@
 ﻿using FMOD;
 using FMOD.Studio;
+using FusionLibrary;
 using FusionLibrary.Extensions;
 using GTA;
 using GTA.Math;
 using RageAudio.Helpers;
-using RageAudio.Memory.Classes;
+using RageAudio.Memory;
 using RageAudio.Memory.Classes.Audio;
 using RageAudio.Memory.Classes.Entity;
 using System;
@@ -64,6 +65,21 @@ namespace RageAudio
         public readonly ChannelGroup ChannelGroup;
 
         /// <summary>
+        /// Distance of entity to camera.
+        /// </summary>
+        public float DistanceToCamera { get; private set; }
+
+        /// <summary>
+        /// Current reveb level in range of 0.0 - 1.0
+        /// </summary>
+        public float ReverbLevel = 0f;
+
+        /// <summary>
+        /// Current echo level in range of 0.0 - 1.0
+        /// </summary>
+        public float EchoLevel = 0f;
+
+        /// <summary>
         /// Whether <see cref="AudioEvent"/> is disposed or not.
         /// </summary>
         public bool IsDisposed { get; private set; }
@@ -86,26 +102,15 @@ namespace RageAudio
             }
         }
 
-        float currentReverb = 0f;
-        float currentEcho = 0f;
-
         /// <summary>
         /// Updates entity position for spartial sound. Needs to be called every tick.
         /// </summary>
-        internal void Update()
+        internal unsafe void Update()
         {
-            //GTA.UI.Screen.ShowSubtitle(currentReverb.ToString("0.0"));
-            // TODO: Use these settings for distant sound
-            // TODO: Figure it out how to use cinematic camera
-            // TODO: Add rev sound?
-            // TODO: Working Blow Off
-
-            //DspReverb.setParameterFloat((int)DSP_SFXREVERB.DECAYTIME, 10000);
-            //DspReverb.setParameterFloat((int)DSP_SFXREVERB.HFDECAYRATIO, 100);
-            //DspReverb.setParameterFloat((int)DSP_SFXREVERB.DENSITY, 100);
-            //DspReverb.setParameterFloat((int)DSP_SFXREVERB.DIFFUSION, 100)
-            //DspReverb.setParameterFloat((int)DSP_SFXREVERB.WETLEVEL, currentReverb.Remap(0, 1, -80, 20));
-            //DspReverb.setParameterFloat((int)DSP_SFXREVERB.DRYLEVEL, currentReverb.Remap(0, 1, -80, 20));
+            if (SourceEntity != null)
+                DistanceToCamera = NativeMemory.CViewportGame->Position.DistanceTo(SourceEntity.Position);
+            else
+                DistanceToCamera = 1;
 
             UpdateAttributes();
 
@@ -115,13 +120,28 @@ namespace RageAudio
             // as well as in entity
             EnvironmentGroup vehEnvGroup = SourceCVehicle?.VehicleAudio.EnvironmentGroup;
 
-            currentReverb = MathExtensions.Lerp(currentReverb, vehEnvGroup.Reverb, 0.55f);
-            currentEcho = MathExtensions.Lerp(currentEcho, vehEnvGroup.Echo, 0.55f);
+            ReverbLevel = FusionUtils.Lerp(ReverbLevel, vehEnvGroup.Reverb, Game.LastFrameTime * 2);
+            EchoLevel = FusionUtils.Lerp(EchoLevel, vehEnvGroup.Echo, Game.LastFrameTime * 2);
 
-            float echoFeedback = currentEcho.Remap(0, 1, 0, 40);
-            float echoDelay = currentEcho.Remap(0, 1, 0, 200);
-            float echoWetLevel = currentEcho.Remap(0, 0.5f, -80, 40);
-            float reverbWetLevel = currentReverb.Remap(0, 0.5f, -80, 10);
+            // Echo
+            float echoFeedback = EchoLevel.Remap(0, 1, 0, 40);
+            float echoDelay = EchoLevel.Remap(0, 1, 0, 150);
+            float echoWetLevel = EchoLevel.Remap(0, 0.5f, -80, 40);
+
+            // Reverb
+            float reverbWetLevel = ReverbLevel.Remap(0, 0.2f, -80, -7);
+            reverbWetLevel = reverbWetLevel.Clamp(-80, -7);
+            float reverbLateDelay = 30;
+
+            if (SourceEntity is Vehicle vehicle)
+                reverbLateDelay = vehicle.CurrentRPM.Remap(30, 530, 0, 1);
+
+            // Distance reverb
+            float distanceReverbWetLevel = DistanceToCamera.Remap(0, 80, -80, 0);
+            distanceReverbWetLevel = MathExtensions.Clamp(distanceReverbWetLevel, -80, 2);
+            // To make louder in tunnels
+            distanceReverbWetLevel += ReverbLevel * 5;
+
             for (int i = 0; i < AudioEvents.Count; i++)
             {
                 AudioEvent audioEvent = AudioEvents[i];
@@ -137,7 +157,7 @@ namespace RageAudio
                 audioEvent.EventInstance.setPitch(Game.TimeScale);
 
                 // Update Volume and IsMuted
-                audioEvent.ChannelGroup.setVolume(AudioPlayer.GameVolume);
+                audioEvent.ChannelGroup.setVolume(audioEvent.Volume.Remap(0, 1, 0, AudioPlayer.GameVolume));
                 audioEvent.ChannelGroup.setMute(AudioPlayer.IsMuted);
 
                 // Update DSP
@@ -145,14 +165,11 @@ namespace RageAudio
                 audioEvent.DspEcho.setParameterFloat((int)DSP_ECHO.FEEDBACK, echoFeedback);
                 audioEvent.DspEcho.setParameterFloat((int)DSP_ECHO.DELAY, echoDelay);
                 audioEvent.DspEcho.setParameterFloat((int)DSP_ECHO.WETLEVEL, echoWetLevel);
-                audioEvent.DspEcho.setParameterFloat((int)DSP_ECHO.DRYLEVEL, 0);
 
-                audioEvent.DspReverb.setParameterFloat((int)DSP_SFXREVERB.DECAYTIME, 5000);
-                audioEvent.DspReverb.setParameterFloat((int)DSP_SFXREVERB.HFDECAYRATIO, 100);
-                audioEvent.DspReverb.setParameterFloat((int)DSP_SFXREVERB.DENSITY, 100);
-                audioEvent.DspReverb.setParameterFloat((int)DSP_SFXREVERB.DIFFUSION, 100);
                 audioEvent.DspReverb.setParameterFloat((int)DSP_SFXREVERB.WETLEVEL, reverbWetLevel);
-                audioEvent.DspReverb.setParameterFloat((int)DSP_SFXREVERB.DRYLEVEL, 0);
+                audioEvent.DspReverb.setParameterFloat((int)DSP_SFXREVERB.LATEDELAY, 30);
+
+                audioEvent.DSPDistanceReverb.setParameterFloat((int)DSP_SFXREVERB.WETLEVEL, distanceReverbWetLevel);
             }
 
             previousPosition = SourceEntity.Position;

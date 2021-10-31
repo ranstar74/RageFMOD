@@ -102,7 +102,7 @@ namespace RageAudio.Memory
 
                 if (CViewportGameAddr != IntPtr.Zero)
                 {
-                    CViewportGame = *(CViewportGame**)CViewportGameAddr;
+                    CViewportGame = (CViewportGame*)CViewportGameAddr;
                 }
             }
         }
